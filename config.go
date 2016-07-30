@@ -11,133 +11,97 @@ package goini
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 )
 
 type Config struct {
-	filepath string                         //your ini file path directory+file
-	conflist []map[string]map[string]string //configuration information slice
+	info map[string]map[string]string // configuration information
 }
 
-//Create an empty configuration file
-func SetConfig(filepath string) *Config {
-	c := new(Config)
-	c.filepath = filepath
+func NewConfig(path string) *Config {
+	c := &Config{info: make(map[string]map[string]string)}
 
-	return c
-}
-
-//To obtain corresponding value of the key values
-func (c *Config) GetValue(section, name string) string {
-	c.ReadList()
-	conf := c.ReadList()
-	for _, v := range conf {
-		for key, value := range v {
-			if key == section {
-				return value[name]
-			}
-		}
-	}
-	return "no value"
-}
-
-//Set the corresponding value of the key value, if not add, if there is a key change
-func (c *Config) SetValue(section, key, value string) bool {
-	c.ReadList()
-	data := c.conflist
-	var ok bool
-	var index = make(map[int]bool)
-	var conf = make(map[string]map[string]string)
-	for i, v := range data {
-		_, ok = v[section]
-		index[i] = ok
-	}
-
-	i, ok := func(m map[int]bool) (i int, v bool) {
-		for i, v := range m {
-			if v == true {
-				return i, true
-			}
-		}
-		return 0, false
-	}(index)
-
-	if ok {
-		c.conflist[i][section][key] = value
-		return true
-	} else {
-		conf[section] = make(map[string]string)
-		conf[section][key] = value
-		c.conflist = append(c.conflist, conf)
-		return true
-	}
-
-	return false
-}
-
-//Delete the corresponding key values
-func (c *Config) DeleteValue(section, name string) bool {
-	c.ReadList()
-	data := c.conflist
-	for i, v := range data {
-		for key, _ := range v {
-			if key == section {
-				delete(c.conflist[i][key], name)
-				return true
-			}
-		}
-	}
-	return false
-}
-
-//List all the configuration file
-func (c *Config) ReadList() []map[string]map[string]string {
-
-	if _, err := os.Stat(c.filepath); os.IsNotExist(err) {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
 		log.Fatal(err)
 	}
 
-	file, err := os.Open(c.filepath)
+	file, err := os.Open(path)
 	if err != nil {
 		CheckErr(err)
 	}
 	defer file.Close()
-	var data map[string]map[string]string
+
 	var section string
 	buf := bufio.NewReader(file)
+
 	for {
 		l, err := buf.ReadString('\n')
-		line := strings.TrimSpace(l)
 		if err != nil {
 			if err != io.EOF {
 				CheckErr(err)
-			}
-			if len(line) == 0 {
+			} else {
 				break
 			}
 		}
+		line := strings.TrimSpace(l)
+
 		switch {
-		case len(line) == 0:
+		case len(line) == 0 || line[0] == '#':
+			continue
 		case line[0] == '[' && line[len(line)-1] == ']':
 			section = strings.TrimSpace(line[1 : len(line)-1])
-			data = make(map[string]map[string]string)
-			data[section] = make(map[string]string)
+			c.info[section] = make(map[string]string)
 		default:
 			i := strings.IndexAny(line, "=")
+			key := strings.TrimSpace(line[:i])
 			value := strings.TrimSpace(line[i+1 : len(line)])
-			data[section][strings.TrimSpace(line[0:i])] = value
-			if c.uniquappend(section) == true {
-				c.conflist = append(c.conflist, data)
-			}
+			c.info[section][key] = value
 		}
-
 	}
 
-	return c.conflist
+	return c
+}
+
+func (c *Config) GetString(section string, field string) (string, error) {
+	value, exists := c.info[section][field]
+	if exists {
+		return value, nil
+	}
+	err := errors.New("the field is not exist.")
+	return "", err
+}
+
+func (c *Config) GetInt(section string, field string) (int, error) {
+	value, exists := c.info[section][field]
+	if exists {
+		return strconv.Atoi(value)
+	}
+	err := errors.New("the field is not exist.")
+	return -1, err
+}
+
+func (c *Config) GetBool(section string, field string) (bool, error) {
+	value, exists := c.info[section][field]
+	if exists {
+		return strconv.ParseBool(value)
+	}
+	err := errors.New("the field is not exist.")
+	return false, err
+}
+
+func (c *Config) GetFloat(section string, field string) (float64, error) {
+	value, exists := c.info[section][field]
+	if exists {
+		return strconv.ParseFloat(value, 64)
+	}
+	err := errors.New("the field is not exist.")
+	return 0, err
 }
 
 func CheckErr(err error) string {
@@ -145,16 +109,4 @@ func CheckErr(err error) string {
 		return fmt.Sprintf("Error is :'%s'", err.Error())
 	}
 	return "Notfound this error"
-}
-
-//Ban repeated appended to the slice method
-func (c *Config) uniquappend(conf string) bool {
-	for _, v := range c.conflist {
-		for k, _ := range v {
-			if k == conf {
-				return false
-			}
-		}
-	}
-	return true
 }

@@ -28,6 +28,7 @@ goini
 
 >使用案例
 
-	conf := SetConfig("/etc/test.conf")
-	host := conf.GetValue("DEFAULT", "host")
-	fmt.Printf("host = %s\n", host)
+	conf := goini.NewConfig("/etc/test.conf")
+	host := conf.GetString("DEFAULT", "host")
+	port := conf.GetInt("DEFALUT", "port")
+	fmt.Printf("host = %s, port=%d\n", host, port)

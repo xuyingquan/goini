@@ -6,7 +6,8 @@ import (
 )
 
 func Test_Config(t *testing.T) {
-	conf := SetConfig("/test.conf")
-	host := conf.GetValue("DEFAULT", "host")
+	conf := NewConfig("/home/xyq/test.conf")
+	host, err := conf.GetString("DEFAULT", "host")
+	fmt.Println(err)
 	fmt.Println(host)
 }
