@@ -30,5 +30,5 @@ goini
 
 	conf := goini.NewConfig("/etc/test.conf")
 	host, _ := conf.GetString("DEFAULT", "host")
-	port, _ := conf.GetInt("DEFALUT", "port")
+	port, _ := conf.GetInt("DEFAULT", "port")
 	fmt.Printf("host = %s, port=%d\n", host, port)
