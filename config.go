@@ -86,6 +86,16 @@ func (c *Config) GetInt(section string, field string) (int, error) {
 	return -1, err
 }
 
+func (c *Config) GetUint(section string, field string) (uint, error) {
+	value, exists := c.info[section][field]
+	if exists {
+		v, err := strconv.ParseUint(value, 10, 64)
+		return uint(v), err
+	}
+	err := errors.New("the field is not exist.")
+	return 0, err
+}
+
 func (c *Config) GetBool(section string, field string) (bool, error) {
 	value, exists := c.info[section][field]
 	if exists {
